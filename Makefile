@@ -15,10 +15,10 @@ run-db:
 	docker-compose up &
 
 run-schema:
-	psql -d test -h localhost -W postgres -w -a -f schema.sql
+	psql -d test -h localhost -W postgres -w -f schema.sql
 
 insert-sample-data:
-	psql -d test -h localhost -W postgres -w -a -f sample-data.sql
+	psql -d test -h localhost -W postgres -w -f sample-data.sql
 
 postgraphql:
 	npx postgraphile -c postgres://postgres@localhost/test --schema public -e secret -w
