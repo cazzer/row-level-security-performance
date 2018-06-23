@@ -37,16 +37,12 @@ on items
 as permissive
 for all
 to application_user
-using (
-  (
-    select true as bool from (
-      select item_id
-      from user_items
-      where user_items.user_id = current_setting('jwt.claims.role')::uuid
-      and user_items.item_id = items.id
-    ) as item_permissions
-  ) = true
-);
+using (exists(
+  select item_id
+  from user_items
+  where user_items.user_id = current_setting('jwt.claims.role')::uuid
+  and user_items.item_id = items.id
+));
 
 create policy new_item
 on items
