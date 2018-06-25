@@ -24,11 +24,16 @@ BEGIN
   EXIT WHEN counter = n;
 	  counter := counter + 1;
 	  insert into users (name) values ('user ' || counter) returning id into user_id;
-	  set local jwt.claims.role = '34e221c8-35a0-4957-a4d3-98fdd5c11683';
+	  execute 'set local jwt.claims.role = ''' || user_id || '''';
 	  perform insert_data(1000);
-	  update items
-      set permissions = array_append(permissions, user_id)
-      where random() > .95;
+    execute 'insert into user_items (item_id, user_id)
+      select
+        items.id as item_id,
+        ''' || user_id || '''
+      from items
+      left outer join user_items on items.id = item_id and user_id = ''' || user_id || '''
+      where user_id is null
+      and random() > .99';
   end loop;
   return n;
 end;
