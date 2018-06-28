@@ -21,6 +21,14 @@ create table if not exists user_items (
   user_id uuid references users(id)
 );
 
+create view items_view
+with (security_barrier)
+as
+  select items.*
+  from items
+  join user_items on item_id = items.id
+  and user_id = current_setting('jwt.claims.role')::uuid;
+
 grant all
 on schema public
 to application_user;
