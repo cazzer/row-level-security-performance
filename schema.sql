@@ -37,41 +37,6 @@ grant all
 on all tables in schema public
 to application_user;
 
-alter table items
-enable row level security;
-
-create policy item_owner
-on items
-as permissive
-for all
-to application_user
-using (exists(
-  select item_id
-  from user_items
-  where user_items.user_id = current_setting('jwt.claims.role')::uuid
-  and user_items.item_id = items.id
-));
-
-create policy new_item
-on items
-as permissive
-for all
-to application_user
-using (
-  (
-    select count(*)
-    from user_items
-    where user_items.item_id = items.id
-  ) = 0
-)
-with check (
-  (
-    select count(*)
-    from user_items
-    where user_items.item_id = items.id
-  ) = 0
-);
-
 create policy user_item_owner
 on user_items
 for all
