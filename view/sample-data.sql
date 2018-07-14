@@ -40,3 +40,42 @@ end;
 $$ LANGUAGE plpgsql;
 
 select insert_users(100);
+
+create or replace function user_item_stats()
+  returns setof text
+  as $$
+declare
+  user_id uuid;
+  row record;
+begin
+  select id
+    from users
+    where random() > .95
+    limit 1 into user_id;
+  execute 'set local role = ''' || user_id || '''';
+  execute 'set local jwt.claims.role = ''' || user_id || '''';
+  return query
+    explain analyze select count(*)
+    from items_view;
+  return;
+end
+$$ language plpgsql;
+
+create view permission_stats as
+  select
+    min(count),
+    avg(count),
+    max(count),
+    sum(count),
+    (
+      select count(*) from items
+    ) as item_count,
+    (
+      select count(*) from users
+    ) as user_count
+  from (
+    select
+      count(user_id)
+    from user_items
+    group by item_id
+  ) permission_counts;
