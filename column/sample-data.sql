@@ -28,7 +28,7 @@ BEGIN
     perform insert_data(1000);
     update items
       set permissions = array_append(permissions, user_id)
-      where random() > .95
+      where random() > .99
       and not permissions @> array[user_id];
   end loop;
   return n;
