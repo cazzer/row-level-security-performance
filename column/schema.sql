@@ -17,6 +17,8 @@ create table if not exists items (
   permissions name[]
 );
 
+create index permissions_index on items using gin(permissions);
+
 grant all
 on schema public
 to application_user;
