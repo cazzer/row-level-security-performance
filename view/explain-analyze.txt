@@ -1,0 +1,13 @@
+Aggregate  (cost=7423.76..7423.77 rows=1 width=8) (actual time=71.992..72.045 rows=1 loops=1)
+  ->  Gather  (cost=1000.42..7406.83 rows=1354 width=73) (actual time=13.838..65.803 rows=1330 loops=1)
+        Workers Planned: 1
+        Workers Launched: 1
+        ->  Nested Loop  (cost=0.42..6271.43 rows=796 width=73) (actual time=11.091..59.657 rows=665 loops=2)
+              ->  Parallel Seq Scan on user_items  (cost=0.00..2856.40 rows=796 width=16) (actual time=11.021..44.010 rows=665 loops=2)
+                    Filter: (user_id = (current_setting('jwt.claims.role'::text))::uuid)
+                    Rows Removed by Filter: 74024
+              ->  Index Only Scan using items_pkey on items  (cost=0.42..4.29 rows=1 width=16) (actual time=0.009..0.009 rows=1 loops=1330)
+                    Index Cond: (id = user_items.item_id)
+                    Heap Fetches: 498
+Planning time: 0.541 ms
+Execution time: 74.874 ms

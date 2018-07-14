@@ -1,0 +1,27 @@
+=====================
+No GIN on permissions
+=====================
+
+Finalize Aggregate  (cost=5984.40..5984.41 rows=1 width=8) (actual time=48.524..48.528 rows=1 loops=1)
+  ->  Gather  (cost=5984.18..5984.39 rows=2 width=8) (actual time=47.298..48.499 rows=3 loops=1)
+        Workers Planned: 2
+        Workers Launched: 2
+        ->  Partial Aggregate  (cost=4984.18..4984.19 rows=1 width=8) (actual time=38.167..38.172 rows=1 loops=3)
+              ->  Parallel Seq Scan on items  (cost=0.00..4983.09 rows=438 width=0) (actual time=0.449..36.410 rows=339 loops=3)
+                    Filter: (permissions @> ARRAY[(current_setting('jwt.claims.role'::text))::name])
+                    Rows Removed by Filter: 32994
+Planning time: 0.165 ms
+Execution time: 51.929 m
+
+==================
+GIN on permissions
+==================
+
+Aggregate  (cost=2608.51..2608.52 rows=1 width=8) (actual time=12.314..12.317 rows=1 loops=1)
+  ->  Bitmap Heap Scan on items  (cost=22.29..2605.19 rows=1327 width=0) (actual time=0.239..6.687 rows=1364 loops=1)
+        Recheck Cond: (permissions @> ARRAY[(current_setting('jwt.claims.role'::text))::name])
+        Heap Blocks: exact=282
+        ->  Bitmap Index Scan on permissions_index  (cost=0.00..21.96 rows=1327 width=0) (actual time=0.182..0.182 rows=1364 loops=1)
+              Index Cond: (permissions @> ARRAY[(current_setting('jwt.claims.role'::text))::name])
+Planning time: 2.763 ms
+Execution time: 12.423 ms
