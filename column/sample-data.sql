@@ -2,40 +2,44 @@ create or replace function insert_data(n integer)
 returns integer
 AS $$
 DECLARE
-  counter INTEGER := 0;
-BEGIN
-  LOOP
-  EXIT WHEN counter = n;
-  counter := counter + 1;
-  insert into items (value) values ('test value ' || counter);
+  counter integer := 0;
+  public boolean;
+begin
+  loop
+  exit when counter = n;
+    counter := counter + 1;
+    if random() < .2 then
+      public := true;
+    else
+      public := false;
+    end if;
+    insert into items (value, public) values ('test value ' || counter, public);
   end loop;
   return n;
 end;
-$$ LANGUAGE plpgsql;
+$$ language plpgsql;
 
 create or replace function insert_users(n integer)
 returns integer
-AS $$
-DECLARE
-  counter INTEGER := 0;
+as $$
+declare
+  counter integer := 0;
   user_id name;
-BEGIN
-  LOOP
-  EXIT WHEN counter = n;
+begin
+  loop
+  exit when counter = n;
     counter := counter + 1;
     insert into users (name) values ('user ' || counter) returning id into user_id;
     execute 'set local jwt.claims.role = ''' || user_id || '''';
     perform insert_data(1000);
     update items
-      set permissions = array_append(permissions, user_id)
+      set read = array_append(read, user_id)
       where random() > .99
-      and not permissions @> array[user_id];
+      and not read @> array[user_id];
   end loop;
   return n;
 end;
-$$ LANGUAGE plpgsql;
-
-select insert_users(100);
+$$ language plpgsql;
 
 create or replace function user_item_stats()
   returns setof text
@@ -59,10 +63,10 @@ $$ language plpgsql;
 
 create view permission_stats as
   select
-    min(array_length(permissions, 1)),
-    avg(array_length(permissions, 1)),
-    max(array_length(permissions, 1)),
-    sum(array_length(permissions, 1)),
+    min(array_length(read, 1)),
+    avg(array_length(read, 1)),
+    max(array_length(read, 1)),
+    sum(array_length(read, 1)),
     (
       select count(*) from items
     ) as item_count,

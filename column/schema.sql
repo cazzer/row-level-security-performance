@@ -11,13 +11,13 @@ create table if not exists users (
 create table if not exists items (
   id uuid default uuid_generate_v4() not null primary key,
   value text,
-  created_at timestamp with time zone default now(),
-  parent_id uuid references public.items(id),
   public boolean default false,
-  permissions name[]
+  read uuid[],
+  write uuid[]
 );
 
-create index permissions_index on items using gin(permissions);
+create index read_permissions_index on items using gin(read);
+create index write_permissions_index on items using gin(write);
 
 grant all
 on schema public
@@ -36,18 +36,20 @@ as permissive
 for all
 to application_user
 using (
-  items.permissions @> array[current_setting('jwt.claims.role')::name]
+  items.public
+  or items.read && array[current_setting('jwt.claims.role')::uuid]
+  or items.write && array[current_setting('jwt.claims.role')::uuid]
 )
 with check (
-  items.permissions @> array[current_setting('jwt.claims.role')::name]
-
+  items.public
+  or items.write && array[current_setting('jwt.claims.role')::uuid]
 );
 
 create or replace function insert_item_permission()
   returns trigger
   as $$
 begin
-  new.permissions = array[current_setting('jwt.claims.role')::name];
+  new.write = array[current_setting('jwt.claims.role')::uuid];
   return new;
 end
 $$ language plpgsql;
