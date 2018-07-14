@@ -47,22 +47,9 @@ using (exists(
 create policy new_item
 on items
 as permissive
-for all
+for insert
 to application_user
-using (
-  (
-    select count(*)
-    from user_items
-    where user_items.item_id = items.id
-  ) = 0
-)
-with check (
-  (
-    select count(*)
-    from user_items
-    where user_items.item_id = items.id
-  ) = 0
-);
+with check (true);
 
 create policy user_item_owner
 on user_items
