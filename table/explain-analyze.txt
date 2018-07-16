@@ -1,0 +1,13 @@
+Aggregate  (cost=3121681.50..3121681.51 rows=1 width=8) (actual time=28.917..28.922 rows=1 loops=1)
+  ->  Seq Scan on items  (cost=0.00..3121669.00 rows=5000 width=0) (actual time=15.867..23.448 rows=1046 loops=1)
+        Filter: (alternatives: SubPlan 1 or hashed SubPlan 2)
+        Rows Removed by Filter: 8954
+        SubPlan 1
+          ->  Seq Scan on user_items  (cost=0.00..312.15 rows=1 width=0) (never executed)
+                Filter: ((item_id = items.id) AND (user_id = (current_setting('jwt.claims.role'::text))::uuid))
+        SubPlan 2
+          ->  Seq Scan on user_items user_items_1  (cost=0.00..286.02 rows=1046 width=16) (actual time=2.370..10.693 rows=1046 loops=1)
+                Filter: (user_id = (current_setting('jwt.claims.role'::text))::uuid)
+                Rows Removed by Filter: 9405
+Planning time: 0.181 ms
+Execution time: 28.987 ms
