@@ -24,7 +24,7 @@ returns integer
 as $$
 declare
   counter integer := 0;
-  user_id name;
+  user_id uuid;
 begin
   loop
   exit when counter = n;
@@ -33,9 +33,9 @@ begin
     execute 'set local jwt.claims.role = ''' || user_id || '''';
     perform insert_data(1000);
     update items
-      set read = array_append(read, user_id)
+      set acl_read = array_append(acl_read, user_id)
       where random() > .99
-      and not read @> array[user_id];
+      and not acl_read @> array[user_id];
   end loop;
   return n;
 end;
@@ -63,10 +63,10 @@ $$ language plpgsql;
 
 create view permission_stats as
   select
-    min(array_length(read, 1)),
-    avg(array_length(read, 1)),
-    max(array_length(read, 1)),
-    sum(array_length(read, 1)),
+    min(array_length(acl_read, 1)),
+    avg(array_length(acl_read, 1)),
+    max(array_length(acl_read, 1)),
+    sum(array_length(acl_read, 1)),
     (
       select count(*) from items
     ) as item_count,
