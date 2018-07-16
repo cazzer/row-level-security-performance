@@ -48,7 +48,6 @@ create or replace function insert_item_permission()
   as $$
 begin
   new.acl_write = array[current_setting('jwt.claims.role')::uuid];
-  new.acl_write && array[current_setting('jwt.claims.role')::uuid];
   return new;
 end
 $$ language plpgsql;
