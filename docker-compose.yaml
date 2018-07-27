@@ -2,7 +2,7 @@ version: "3"
 services:
   pg:
     image: mdillon/postgis:10
-    container_name: 'local-pg'
+    container_name: 'breakdown-pg'
     command: postgres -c config_file=/etc/postgresql.conf
     ports:
       - 5432:5432
