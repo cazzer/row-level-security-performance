@@ -11,9 +11,8 @@ create table if not exists users (
 create table if not exists items (
   id uuid default uuid_generate_v4() not null primary key,
   value text,
-  public boolean default false,
-  acl_read uuid[],
-  acl_write uuid[]
+  acl_read uuid[] default array[]::uuid[],
+  acl_write uuid[] default array[]::uuid[]
 );
 
 create index read_permissions_index on items using gin(acl_read);
@@ -36,18 +35,20 @@ as permissive
 for all
 to application_user
 using (
-  items.acl_read && regexp_split_to_array(current_setting('jwt.claims.roles'), ',')::uuid[]
-  or items.acl_write && regexp_split_to_array(current_setting('jwt.claims.roles'), ',')::uuid[]
+  items.acl_read && regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[]
+  or items.acl_write && regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[]
 )
 with check (
-  items.acl_write && regexp_split_to_array(current_setting('jwt.claims.roles'), ',')::uuid[]
+  items.acl_write && regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[]
 );
 
 create or replace function insert_item_permission()
   returns trigger
   as $$
 begin
-  new.acl_write = array[current_setting('jwt.claims.role')::uuid];
+  new.acl_write = array[
+    (regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[])[1]
+  ];
   return new;
 end
 $$ language plpgsql;
@@ -58,6 +59,7 @@ on items
 for each row
 execute procedure insert_item_permission();
 
+-- this is only neccessary if we plan to give SQL access to users
 create or replace function create_role()
   returns trigger
   as $$
