@@ -3,7 +3,7 @@ create extension if not exists "uuid-ossp";
 
 create role application_user;
 
-create table if not exists users (
+create table if not exists users_and_groups (
   id uuid default uuid_generate_v4() not null primary key,
   name text not null
 );
@@ -11,15 +11,20 @@ create table if not exists users (
 create table if not exists items (
   id uuid default uuid_generate_v4() not null primary key,
   value text,
-  created_at timestamp with time zone default now(),
-  parent_id uuid references public.items(id),
   public boolean default false
 );
 
-create table if not exists user_items (
+create table if not exists permissions (
   item_id uuid references items(id),
-  user_id uuid references users(id)
+  user_or_group_id uuid references users_and_groups(id),
+  read boolean default true not null,
+  write boolean default false not null
 );
+
+create index on permissions(item_id);
+create index on permissions(user_or_group_id);
+
+create unique index permissions_index ON permissions (item_id, user_or_group_id);
 
 grant all
 on schema public
@@ -37,11 +42,28 @@ on items
 as permissive
 for all
 to application_user
-using (exists(
+using (
+  items.public = true
+  or exists(
+    select item_id
+    from permissions
+    where (
+      permissions.user_or_group_id =
+        any(regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[])
+      and permissions.item_id = items.id
+      and read = true
+    )
+  )
+)
+with check (exists(
   select item_id
-  from user_items
-  where user_items.user_id = current_setting('jwt.claims.role')::uuid
-  and user_items.item_id = items.id
+  from permissions
+  where (
+    permissions.user_or_group_id =
+      any(regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[])
+    and permissions.item_id = items.id
+    and write = true
+  )
 ));
 
 create policy new_item
@@ -51,31 +73,40 @@ for insert
 to application_user
 with check (true);
 
-create policy user_item_owner
-on user_items
+create policy permission_owner
+on permissions
 for all
 to application_user
-using (user_items.user_id = current_setting('jwt.claims.role')::uuid)
-with check (user_items.user_id = current_setting('jwt.claims.role')::uuid);
+using (
+  permissions.user_or_group_id =
+      any(regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[])
+  and permissions.read = true
+)
+with check (
+  permissions.user_or_group_id =
+      any(regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[])
+  and permissions.write = true
+);
 
-create or replace function insert_user_item()
+create or replace function insert_permission()
   returns trigger
   as $$
 begin
-  insert into user_items (item_id, user_id) values (
+  insert into permissions (item_id, user_or_group_id) values (
     new.id,
-    current_setting('jwt.claims.role')::uuid
+    (regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[])[1]
   );
   return new;
 end
 $$ language plpgsql;
 
-create trigger insert_user_item_trigger
+create trigger insert_permission_trigger
 after insert
 on items
 for each row
-execute procedure insert_user_item();
+execute procedure insert_permission();
 
+-- this is only neccessary if we plan to give SQL access to users
 create or replace function create_role()
   returns trigger
   as $$
@@ -88,6 +119,6 @@ $$ language plpgsql;
 
 create trigger insert_user_trigger
 after insert
-on users
+on users_and_groups
 for each row
 execute procedure create_role();

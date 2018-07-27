@@ -23,16 +23,16 @@ BEGIN
   LOOP
   EXIT WHEN counter = n;
     counter := counter + 1;
-    insert into users (name) values ('user ' || counter) returning id into user_id;
+    insert into users_and_groups (name) values ('user ' || counter) returning id into user_id;
     execute 'set local jwt.claims.role = ''' || user_id || '''';
     perform insert_data(1000);
-    execute 'insert into user_items (item_id, user_id)
+    execute 'insert into permissions (item_id, user_or_group_id)
       select
         items.id as item_id,
         ''' || user_id || '''
       from items
-      left outer join user_items on items.id = item_id and user_id = ''' || user_id || '''
-      where user_id is null
+      left outer join permissions on items.id = item_id and user_or_group_id = ''' || user_id || '''
+      where user_or_group_id is null
       and random() > .99';
   end loop;
   return n;
@@ -49,7 +49,7 @@ declare
   row record;
 begin
   select id
-    from users
+    from users_and_groups
     where random() > .95
     limit 1 into user_id;
   execute 'set local role = ''' || user_id || '''';
@@ -71,11 +71,11 @@ create view permission_stats as
       select count(*) from items
     ) as item_count,
     (
-      select count(*) from users
+      select count(*) from users_and_groups
     ) as user_count
   from (
     select
-      count(user_id)
-    from user_items
+      count(user_or_group_id)
+    from permissions
     group by item_id
   ) permission_counts;
