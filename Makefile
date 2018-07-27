@@ -3,8 +3,7 @@
 
 recreate-db:
 	make run-schema && \
-	make insert-sample-data && \
-	make postgraphql
+	make insert-sample-data
 
 destroy-db:
 	docker-compose down && \
