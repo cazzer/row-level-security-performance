@@ -24,7 +24,7 @@ BEGIN
   EXIT WHEN counter = n;
     counter := counter + 1;
     insert into users_and_groups (name) values ('user ' || counter) returning id into user_id;
-    execute 'set local jwt.claims.role = ''' || user_id || '''';
+    execute 'set local jwt.claims.roles = ''' || user_id || '''';
     perform insert_data(1000);
     execute 'insert into permissions (item_id, user_or_group_id)
       select
@@ -53,7 +53,7 @@ begin
     where random() > .95
     limit 1 into user_id;
   execute 'set local role = ''' || user_id || '''';
-  execute 'set local jwt.claims.role = ''' || user_id || '''';
+  execute 'set local jwt.claims.roles = ''' || user_id || '''';
   return query
     explain analyze select count(*)
     from items;

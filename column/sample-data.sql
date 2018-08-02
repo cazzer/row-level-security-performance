@@ -3,17 +3,11 @@ returns integer
 AS $$
 DECLARE
   counter integer := 0;
-  public boolean;
 begin
   loop
   exit when counter = n;
     counter := counter + 1;
-    if random() < .2 then
-      public := true;
-    else
-      public := false;
-    end if;
-    insert into items (value, public) values ('test value ' || counter, public);
+    insert into items (value) values ('test value ' || counter);
   end loop;
   return n;
 end;
@@ -30,7 +24,7 @@ begin
   exit when counter = n;
     counter := counter + 1;
     insert into users (name) values ('user ' || counter) returning id into user_id;
-    execute 'set local jwt.claims.role = ''' || user_id || '''';
+    execute 'set local jwt.claims.roles = ''' || user_id || '''';
     perform insert_data(1000);
     update items
       set acl_read = array_append(acl_read, user_id)
@@ -53,7 +47,7 @@ begin
     where random() > .95
     limit 1 into user_id;
   execute 'set local role = ''' || user_id || '''';
-  execute 'set local jwt.claims.role = ''' || user_id || '''';
+  execute 'set local jwt.claims.roles = ''' || user_id || '''';
   return query
     explain analyze select count(*)
     from items;
@@ -74,3 +68,5 @@ create view permission_stats as
       select count(*) from users
     ) as user_count
   from items;
+
+select insert_users(100);

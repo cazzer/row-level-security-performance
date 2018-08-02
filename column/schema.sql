@@ -35,11 +35,11 @@ as permissive
 for all
 to application_user
 using (
-  items.acl_read && regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[]
-  or items.acl_write && regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[]
+  items.acl_read && regexp_split_to_array(current_setting('jwt.claims.roles'), ',')::uuid[]
+  or items.acl_write && regexp_split_to_array(current_setting('jwt.claims.roles'), ',')::uuid[]
 )
 with check (
-  items.acl_write && regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[]
+  items.acl_write && regexp_split_to_array(current_setting('jwt.claims.roles'), ',')::uuid[]
 );
 
 create or replace function insert_item_permission()
@@ -47,7 +47,7 @@ create or replace function insert_item_permission()
   as $$
 begin
   new.acl_write = array[
-    (regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[])[1]
+    (regexp_split_to_array(current_setting('jwt.claims.roles'), ',')::uuid[])[1]
   ];
   return new;
 end

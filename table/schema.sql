@@ -14,11 +14,15 @@ create table if not exists items (
   public boolean default false
 );
 
+create type permission_role as enum (
+  'read',
+  'write'
+);
+
 create table if not exists permissions (
   item_id uuid references items(id),
   user_or_group_id uuid references users_and_groups(id),
-  read boolean default true not null,
-  write boolean default false not null
+  role permission_role default 'read' not null
 );
 
 create index on permissions(item_id);
@@ -49,9 +53,8 @@ using (
     from permissions
     where (
       permissions.user_or_group_id =
-        any(regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[])
+        any(regexp_split_to_array(current_setting('jwt.claims.roles'), ',')::uuid[])
       and permissions.item_id = items.id
-      and read = true
     )
   )
 )
@@ -60,9 +63,9 @@ with check (exists(
   from permissions
   where (
     permissions.user_or_group_id =
-      any(regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[])
+      any(regexp_split_to_array(current_setting('jwt.claims.roles'), ',')::uuid[])
     and permissions.item_id = items.id
-    and write = true
+    and permissions.role = 'write'
   )
 ));
 
@@ -79,22 +82,22 @@ for all
 to application_user
 using (
   permissions.user_or_group_id =
-      any(regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[])
-  and permissions.read = true
+      any(regexp_split_to_array(current_setting('jwt.claims.roles'), ',')::uuid[])
 )
 with check (
   permissions.user_or_group_id =
-      any(regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[])
-  and permissions.write = true
+      any(regexp_split_to_array(current_setting('jwt.claims.roles'), ',')::uuid[])
+  and permissions.role = 'write'
 );
 
 create or replace function insert_permission()
   returns trigger
   as $$
 begin
-  insert into permissions (item_id, user_or_group_id) values (
+  insert into permissions (item_id, user_or_group_id, role) values (
     new.id,
-    (regexp_split_to_array(current_setting('jwt.claims.role'), ',')::uuid[])[1]
+    (regexp_split_to_array(current_setting('jwt.claims.roles'), ',')::uuid[])[1],
+    'write'
   );
   return new;
 end
