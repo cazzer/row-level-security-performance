@@ -1,6 +1,3 @@
-## CAUTION this will completely destroy your database!!
-## Run migrations and salesforce-import to restore
-
 seed-db:
 	make run-schema && \
 	make insert-sample-data
